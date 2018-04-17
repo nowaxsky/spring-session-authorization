@@ -22,9 +22,8 @@ public class Swagger2Config {
   }
 
   private ApiInfo apiInfo() {
-    return new ApiInfoBuilder().title("Spring Boot Token Authorization")
-        .description(
-            "It is a service for demonstrating how to login with saving token information in redis")
+    return new ApiInfoBuilder().title("Spring Session Authorization").description(
+        "It is a service for demonstrating how to login with using filter related method in spring-session.")
         .build();
   }
 
