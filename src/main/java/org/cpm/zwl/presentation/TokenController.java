@@ -1,5 +1,6 @@
 package org.cpm.zwl.presentation;
 
+import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -16,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -88,13 +91,20 @@ public class TokenController {
    * 
    * @param name
    * @return
+   * @throws IOException
+   * @throws JsonMappingException
+   * @throws JsonParseException
    */
   @ApiOperation(value = "登入後印出hello")
-  @ApiImplicitParam(name = "authorization", value = "authorization", required = true,
+  @ApiImplicitParam(name = "X-Auth-Token", value = "X-Auth-Token", required = false,
       dataType = "string", paramType = "header")
   @RequestMapping(value = "/hello", method = RequestMethod.GET)
-  public ResponseEntity<ResponseModel> hello(String name) {
-    String hello = "hello " + name;
+  public ResponseEntity<ResponseModel> hello(HttpServletRequest request)
+      throws JsonParseException, JsonMappingException, IOException {
+    String data = (String) request.getSession().getAttribute("userDetail");
+    ObjectMapper mapper = new ObjectMapper();
+    UserDetail userDetail = mapper.readValue(data, UserDetail.class);
+    String hello = "hello: " + userDetail.getUsername() + "(" + userDetail.getUserId() + ")";
     return new ResponseEntity<>(ResponseModel.ok(hello), HttpStatus.OK);
   }
 
@@ -106,17 +116,15 @@ public class TokenController {
    * @throws ServletException
    */
   @ApiOperation(value = "登出")
-  @ApiImplicitParam(name = "authorization", value = "authorization", required = true,
+  @ApiImplicitParam(name = "X-Auth-Token", value = "X-Auth-Token", required = false,
       dataType = "string", paramType = "header")
   @RequestMapping(value = "/logout", method = RequestMethod.DELETE)
   public ResponseEntity<ResponseModel> logout(HttpServletRequest request) throws ServletException {
-    
-    //TODO
-    request.logout();
+
+    // TODO
+    request.getSession().setAttribute("userDetail", null);
     System.out.println("logout");
     return new ResponseEntity<>(ResponseModel.ok(), HttpStatus.OK);
   }
-
-
 
 }

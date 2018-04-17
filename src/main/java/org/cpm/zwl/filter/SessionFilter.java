@@ -1,6 +1,10 @@
 package org.cpm.zwl.filter;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -19,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @WebFilter(filterName = "sessionFilter", urlPatterns = "/*")
 public class SessionFilter implements Filter {
 
-  private final String savePath = "/tokens/login";
-
   @Override
   public void destroy() {
     // TODO Auto-generated method stub
@@ -33,39 +35,52 @@ public class SessionFilter implements Filter {
 
     HttpServletRequest request = (HttpServletRequest) req;
     HttpServletResponse response = (HttpServletResponse) res;
-    System.out.println("doFilter");
 
     String path = request.getRequestURI().substring(request.getContextPath().length())
         .replaceAll("[/]+$", "");
+
     System.out.println("path: " + path);
-    boolean allowedPath = savePath.contains(path);
-    if (allowedPath) {
+
+    // 不須驗證白名單
+    boolean pathWithoutCheck = this.checkPath(path);
+    if (pathWithoutCheck) {
       filterChain.doFilter(req, res);
       return;
     }
 
+    System.out.println("doFilter");
     // 從header中取得token
     String token = request.getHeader("X-Auth-Token");
     System.out.println("token: " + token);
 
-    // 若token為空則登入失敗
+    // 取得session中的資訊(同到redis查詢該redis), 若無則表示攜帶的token錯誤
+    String attribute = (String) request.getSession().getAttribute("userDetail");
+    System.out.println("userDetail: " + attribute);
+
+    // token和attribute均不為空則登入成功
+    if (token != null && attribute != null) {
+      System.out.println("pass");
+      filterChain.doFilter(req, res);
+      System.out.println("pass");
+      return;
+    }
+
     if (token == null) {
       System.out.println("token is null");
-      this.returnFail(response);
-      return;
-    }
-
-    // 取得session中的資訊(同到redis查詢該redis), 若無則表示攜帶的token錯誤
-    Object attribute = request.getSession().getAttribute("userDetail");
-    if (attribute == null) {
+    } else {
       System.out.println("attribute is null");
-      this.returnFail(response);
-      return;
     }
+    System.out.println("cannot pass");
+    this.returnFail(response);
+    return;
 
-    System.out.println("pass");
-    filterChain.doFilter(req, res);
+  }
 
+  private boolean checkPath(String path) {
+    List<String> list = Arrays.asList("/tokens/login", "/swagger-ui.html", "/v2/api-docs");
+    Set<String> whiteList = new HashSet<>(list);
+    return whiteList.contains(path) || path.contains("/webjars/springfox-swagger-ui/")
+        || path.contains("/swagger-resources");
   }
 
   @Override
